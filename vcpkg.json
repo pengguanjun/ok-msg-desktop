@@ -4,7 +4,9 @@
   "dependencies": [
     {
       "name": "ffmpeg",
-      "features": ["vpx"]
+      "features": [
+        "vpx"
+      ]
     },
     "libexif",
     "libqrencode",

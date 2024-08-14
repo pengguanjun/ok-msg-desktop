@@ -9,14 +9,17 @@ endif()
 
 find_package(ok-gloox REQUIRED)
 if(ok-gloox_FOUND)
-	set(gloox_LIB ok-gloox::ok-gloox)
+	search_dependency(ok-gloox PACKAGE ok-gloox)
+	set(gloox_LIB ok-gloox)
 endif ()
 
 add_definitions(
 		-DLOG_XMPP # xmpp logs
 		-DWANT_PING # xmpp ping
 		-DENABLE_SEND_RAW_XML # send raw xmls
-		-DLOG_TO_FILE)
+		-DLOG_TO_FILE
+		-DINBANDBYTESTREAM_TEST
+		-DCLIENTBASE_TEST)
 
 # ==== Gloox ====
 
@@ -24,8 +27,9 @@ include_directories(${WebRTC_DIR}/include)
 
 file(GLOB ${PROJECT_NAME}_SOURCES *.cpp *.h)
 
-add_library(${PROJECT_NAME} STATIC
-		${${PROJECT_NAME}_SOURCES})
+add_library(${PROJECT_NAME} STATIC ${${PROJECT_NAME}_SOURCES})
+
+target_include_directories(${PROJECT_NAME} PRIVATE ${ok-gloox_INCLUDE_DIRS})
 
 target_link_libraries(${PROJECT_NAME}
 		PUBLIC Plugin
@@ -35,8 +39,7 @@ target_link_libraries(${PROJECT_NAME}
 		PRIVATE ${Qt5Xml_LIBRARIES}
 		PRIVATE ${Qt5Widgets_LIBRARIES})
 
-if (MSVC)
-	set_property(
-			TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY
-			"MultiThreaded$<$<CONFIG:Debug>:Debug>")
-endif (MSVC)
+
+if (WIN32)
+    set_property(TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif ()
