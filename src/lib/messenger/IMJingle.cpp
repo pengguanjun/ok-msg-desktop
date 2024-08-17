@@ -16,14 +16,7 @@
 
 #include <capabilities.h>
 #include <extdisco.h>
-#include <jinglecontent.h>
-#include <jinglefiletransfer.h>
-#include <jinglegroup.h>
-#include <jingleibb.h>
-#include <jingleiceudp.h>
-#include <jinglertp.h>
 #include <jinglesession.h>
-#include <jinglesessionmanager.h>
 
 #include "IM.h"
 #include "base/logs.h"
@@ -39,74 +32,7 @@ IMJingle::IMJingle(IM* im, QObject* parent) : QObject(parent), _im(im) {
     qDebug() << __func__ << "Creating";
 
     qRegisterMetaType<std::string>("std::string");
-
-    auto client = _im->getClient();
-    client->registerMessageHandler(this);
-    client->registerStanzaExtension(new Jingle::JingleMessage());
-
-    // jingle session
-    _sessionManager = std::make_unique<SessionManager>(client, this);
-    _sessionManager->registerPlugin(new Content());
-
-    auto disco = client->disco();
-    // jingle
-    disco->addFeature(XMLNS_JINGLE);
-    disco->addFeature(XMLNS_JINGLE_MESSAGE);
-    disco->addFeature(XMLNS_JINGLE_ERRORS);
-
-    // jingle file
-    disco->addFeature(XMLNS_JINGLE_FILE_TRANSFER);
-    disco->addFeature(XMLNS_JINGLE_FILE_TRANSFER4);
-    disco->addFeature(XMLNS_JINGLE_FILE_TRANSFER5);
-    disco->addFeature(XMLNS_JINGLE_FILE_TRANSFER_MULTI);
-    disco->addFeature(XMLNS_JINGLE_IBB);
-    _sessionManager->registerPlugin(new FileTransfer());
-    _sessionManager->registerPlugin(new IBB());
-
-    // jingle av
-    disco->addFeature(XMLNS_JINGLE_ICE_UDP);
-    disco->addFeature(XMLNS_JINGLE_APPS_DTLS);
-    disco->addFeature(XMLNS_JINGLE_APPS_RTP);
-    disco->addFeature(XMLNS_JINGLE_FEATURE_AUDIO);
-    disco->addFeature(XMLNS_JINGLE_FEATURE_VIDEO);
-    disco->addFeature(XMLNS_JINGLE_APPS_RTP_SSMA);
-    disco->addFeature(XMLNS_JINGLE_APPS_RTP_FB);
-    disco->addFeature(XMLNS_JINGLE_APPS_RTP_SSMA);
-    disco->addFeature(XMLNS_JINGLE_APPS_RTP_HDREXT);
-    disco->addFeature(XMLNS_JINGLE_APPS_GROUP);
-    _sessionManager->registerPlugin(new ICEUDP());
-    _sessionManager->registerPlugin(new Group());
-    _sessionManager->registerPlugin(new RTP());
-
-    auto rtcManager = OkRTCManager::getInstance();
-
-    std::list<ExtDisco::Service> discos;
-
-    ExtDisco::Service disco0;
-    disco0.type = "turn";
-    disco0.host = "chuanshaninfo.com";
-    disco0.port = 34780;
-    disco0.username = "gaojie";
-    disco0.password = "hncs";
-    discos.push_back(disco0);
-
-    ExtDisco::Service disco1;
-    disco1.type = "stun";
-    disco1.host = "stun.l.google.com";
-    disco1.port = 19302;
-
-    discos.push_back(disco1);
-
-    for (const auto& item : discos) {
-        ortc::IceServer ice;
-        ice.uri = item.type + ":" + item.host + ":" + std::to_string(item.port);
-        //              "?transport=" + item.transport;
-        ice.username = item.username;
-        ice.password = item.password;
-        qDebug() << "Add ice:" << ice.uri.c_str();
-        rtcManager->addIceServer(ice);
-    }
-
+    connect(im, &IM::started, this, &IMJingle::onImStarted);
     qDebug() << __func__ << ("Created");
 }
 
@@ -114,6 +40,21 @@ IMJingle::~IMJingle() {
     auto client = _im->getClient();
     client->removeMessageHandler(this);
     qDebug() << __func__ << "Destroyed";
+}
+
+void IMJingle::onImStarted() {
+    auto client = _im->getClient();
+    assert(client);
+
+    client->registerMessageHandler(this);
+    client->registerStanzaExtension(new Jingle::JingleMessage());
+
+    auto disco = client->disco();
+    // jingle
+    disco->addFeature(XMLNS_JINGLE);
+    disco->addFeature(XMLNS_JINGLE_MESSAGE);
+    disco->addFeature(XMLNS_JINGLE_ERRORS);
+
 }
 
 void IMJingle::handleMessageSession(MessageSession* session) {
@@ -246,55 +187,7 @@ void IMJingle::doSessionTerminate(Jingle::Session* session,
                                   const IMPeerId& peerId) {
     auto sid = qstring(jingle->sid());
     qDebug() << __func__ << "sId:" << sid << "peerId" << peerId.toString();
-    //
-    //    auto ws = findSession(sid);
-    //    if (!ws) {
-    //        qWarning() << "session is no existing.";
-    //        return;
-    //    }
-    //
     sessionOnTerminate(sid, peerId);
-
-    //    ws->onTerminate();
-
-    //  int ri = 0;
-    //  for (auto &file : m_waitSendFiles) {
-    //    if (qstring(session->sid()) == file.sId) {
-    //      // TODO 需要处理没有terminate的信令的清理
-    //      // 清理待发文件
-    //      qDebug()<<"session is terminate."<<file.id;
-    ////      doStopFileSendTask(session, file);
-    //      m_waitSendFiles.removeAt(ri);
-    //      return;
-    //    }
-    //    ri++;
-    //  }
-
-    /*
-     *<jingle action='session-terminate'
-     sid='8cfd5b65c45b16822da6b2448f8debb7afa5e0e300000005'
-     xmlns='urn:xmpp:jingle:1'> <reason><busy/></reason>
-        </jingle>
-        reason busy:正忙 decline：拒绝
-     */
-    //  auto state = FINISHED;
-    //  auto reason = jingle->tag()->findChild("reason");
-    //  if (reason) {
-    //    if (reason->findChild("busy")) {
-    //      state = SENDING_A;
-    //    }
-    //  }
-    // rtc
-    //  auto s = findSession(sid);
-    //  if (s) {
-    //    auto rtcManager = OkRTCManager::getInstance();
-    //    if (rtcManager) {
-    //      rtcManager->quit(stdstring(peerId.toString()));
-    //    }
-    //  }
-
-    //    clearSessionInfo(session);
-    //  emit receiveFriendHangup(peerId.toFriendId(), (int)state);
 }
 
 void IMJingle::doSessionAccept(Jingle::Session* session,
@@ -305,31 +198,8 @@ void IMJingle::doSessionAccept(Jingle::Session* session,
     sessionOnAccept(sid, session, peerId, jingle);
 }
 
-// void IMJingle::doSessionInfo(const Session::Jingle* jingle, const IMPeerId& friendId) {
-//     qDebug() << "jingle:%1 peerId:%2"   //
-//              << qstring(jingle->sid())  //
-//              << friendId.toString();
-// }
-
 void IMJingle::doContentRemove(const Session::Jingle* jingle, const IMPeerId& peerId) {
     qDebug() << ("jingle:%1 peerId:%2") << (qstring(jingle->sid())) << ((peerId.toString()));
-
-    //  JID peerJID;
-    //  std::map<std::string, Session> sdMap;
-    //  const PluginList &plugins = jingle->plugins();
-    //  for (const auto p : plugins) {
-    //    qDebug()<<("Plugin:%1")<<((QString::fromStdString(p->filterString())));
-    //    JinglePluginType pt = p->pluginType();
-    //    switch (pt) {
-    //    case JinglePluginType::PluginContent: {
-    //      break;
-    //    }
-    //    default:
-    //      break;
-    //    }
-    //  }
-    //
-    //  _rtcManager->ContentRemove(sdMap, this);
 }
 
 void IMJingle::doContentModify(const Session::Jingle* jingle, const IMPeerId& peerId) {
@@ -367,7 +237,6 @@ bool IMJingle::handleIq(const IQ& iq) {
 
 void IMJingle::handleIqID(const IQ& iq, int context) {}
 
-// IMJingleSession* IMJingle::findSession(const QString& sId) { return m_sessionMap.value(sId); }
 
 }  // namespace messenger
 }  // namespace lib

@@ -13,10 +13,12 @@
 //
 // Created by gaojie on 24-5-29.
 //
+#include <extdisco.h>
 #include <jinglegroup.h>
 #include <jingleiceudp.h>
 #include <jinglertp.h>
 
+#include "IM.h"
 #include "IMCall.h"
 #include "lib/ortc/ok_rtc.h"
 #include "lib/ortc/ok_rtc_defs.h"
@@ -48,60 +50,180 @@ inline void packDtls(const ortc::Dtls& src, gloox::Jingle::ICEUDP::Dtls& to) {
     to.fingerprint = src.fingerprint;
 }
 
-IMCall::IMCall(IM* im, QObject* parent) : IMJingle(im, parent) {}
+IMCallSession::IMCallSession(const QString& sId_,
+                             gloox::Jingle::Session* mSession,
+                             const IMContactId& selfId,
+                             const IMPeerId& peerId,
+                             lib::ortc::JingleCallType callType)
+        : sId(sId_), session(mSession), selfId(selfId), accepted(false), m_callType{callType} {
+    qDebug() << __func__ << "type:" << (int)m_callType << "sid:" << sId
+             << "to peer:" << peerId.toString();
+    qDebug() << __func__ << "be created.";
+}
 
-void IMCall::addCallHandler(CallHandler* hdr) { callHandlers.push_back(hdr); }
+IMCallSession::~IMCallSession() { qDebug() << __func__ << sId; }
 
-bool IMCall::callToGroup(const QString& g) { return false; }
+gloox::Jingle::Session* IMCallSession::getSession() const { return session; }
 
-void IMCall::connectJingle(IMJingle* _jingle) {
-    qDebug() << __func__ << _jingle;
+void IMCallSession::onAccept() {
+    // 对方接收
+    qDebug() << __func__;
+}
 
+void IMCallSession::onTerminate() {
+    qDebug() << __func__;
+    lib::ortc::OkRTCManager::getInstance()->destroyRtc();
+}
+
+void IMCallSession::doTerminate() {
+    qDebug() << __func__;
+
+    // 发送结束协议
+    session->sessionTerminate(
+            new gloox::Jingle::Session::Reason(gloox::Jingle::Session::Reason::Reasons::Success));
+
+    // 销毁rtc
+    lib::ortc::OkRTCManager::getInstance()->destroyRtc();
+}
+
+void IMCallSession::createOffer(const std::string& peerId) {
+    qDebug() << __func__ << "to" << peerId.c_str();
+    auto rm = lib::ortc::OkRTCManager::getInstance();
+    auto r = rm->getRtc();
+    r->CreateOffer(peerId);
+}
+
+const gloox::Jingle::Session::Jingle* IMCallSession::getJingle() const { return jingle; }
+
+void IMCallSession::setJingle(const gloox::Jingle::Session::Jingle* jingle_) { jingle = jingle_; }
+
+CallDirection IMCallSession::direction() const {
+    auto sender = session->initiator().bareJID();
+    auto self = gloox::JID(stdstring(selfId.toString())).bareJID();
+    return (sender == self) ? CallDirection::CallOut : CallDirection::CallIn;
+}
+
+void IMCallSession::setCallStage(CallStage state) { m_callStage = state; }
+
+void IMCallSession::setContext(const ortc::OJingleContent& jc) { context = jc; }
+
+void IMCallSession::start() {}
+
+void IMCallSession::stop() {}
+
+IMCall::IMCall(IM* im, QObject* parent) : IMJingle(im, parent) {
+    qDebug() << __func__ << "...";
+
+    qRegisterMetaType<CallState>("CallState");
+
+    connect(im, &IM::started, this, &IMCall::onImStartedCall);
+    connectCall(this);
+}
+
+IMCall::~IMCall() {}
+
+void IMCall::onImStartedCall() {
+    auto client = _im->getClient();
+    assert(client);
+
+    auto disco = client->disco();
+    // jingle av
+    disco->addFeature(gloox::XMLNS_JINGLE_ICE_UDP);
+    disco->addFeature(gloox::XMLNS_JINGLE_APPS_DTLS);
+    disco->addFeature(gloox::XMLNS_JINGLE_APPS_RTP);
+    disco->addFeature(gloox::XMLNS_JINGLE_FEATURE_AUDIO);
+    disco->addFeature(gloox::XMLNS_JINGLE_FEATURE_VIDEO);
+    disco->addFeature(gloox::XMLNS_JINGLE_APPS_RTP_SSMA);
+    disco->addFeature(gloox::XMLNS_JINGLE_APPS_RTP_FB);
+    disco->addFeature(gloox::XMLNS_JINGLE_APPS_RTP_SSMA);
+    disco->addFeature(gloox::XMLNS_JINGLE_APPS_RTP_HDREXT);
+    disco->addFeature(gloox::XMLNS_JINGLE_APPS_GROUP);
+
+    // session manager
+    _sessionManager = std::make_unique<gloox::Jingle::SessionManager>(client, this);
+    _sessionManager->registerPlugin(new gloox::Jingle::Content());
+    _sessionManager->registerPlugin(new gloox::Jingle::ICEUDP());
+    _sessionManager->registerPlugin(new gloox::Jingle::Group());
+    _sessionManager->registerPlugin(new gloox::Jingle::RTP());
+
+    auto rtcManager = ortc::OkRTCManager::getInstance();
+
+    std::list<gloox::ExtDisco::Service> discos;
+
+    gloox::ExtDisco::Service disco0;
+    disco0.type = "turn";
+    disco0.host = "chuanshaninfo.com";
+    disco0.port = 34780;
+    disco0.username = "gaojie";
+    disco0.password = "hncs";
+    discos.push_back(disco0);
+
+    gloox::ExtDisco::Service disco1;
+    disco1.type = "stun";
+    disco1.host = "stun.l.google.com";
+    disco1.port = 19302;
+
+    discos.push_back(disco1);
+
+    for (const auto& item : discos) {
+        ortc::IceServer ice;
+        ice.uri = item.type + ":" + item.host + ":" + std::to_string(item.port);
+        //              "?transport=" + item.transport;
+        ice.username = item.username;
+        ice.password = item.password;
+        qDebug() << "Add ice:" << ice.uri.c_str();
+        rtcManager->addIceServer(ice);
+    }
+}
+
+void IMCall::addCallHandler(CallHandler* hdr) {
     /**
      * callHandlers
      */
-    connect(_jingle, &IMCall ::receiveCallRequest, this,
+    callHandlers.push_back(hdr);
+}
+
+bool IMCall::callToGroup(const QString& g) { return false; }
+
+void IMCall::connectCall(IMCall* imCall) {
+    qDebug() << __func__ << imCall;
+
+    connect(imCall, &IMCall ::receiveCallRequest, this,
             [&](IMPeerId peerId, QString callId, bool audio, bool video) {
                 for (auto handler : callHandlers) {
                     handler->onCall(peerId, callId, audio, video);
                 }
             });
 
-    connect(_jingle, &IMCall::receiveCallRetract, this, [&](QString friendId, int state) {
+    connect(imCall, &IMCall::receiveCallRetract, this, [&](QString friendId, CallState state) {
         for (auto handler : callHandlers) {
             handler->onCallRetract(friendId, state);
         }
     });
 
-    connect(_jingle, &IMCall::receiveCallAcceptByOther, this,
+    connect(imCall, &IMCall::receiveCallAcceptByOther, this,
             [&](const QString& callId, const IMPeerId& peerId) {
                 for (auto handler : callHandlers) {
                     handler->onCallAcceptByOther(callId, peerId);
                 }
             });
 
-    connect(_jingle, &IMCall::receiveCallStateAccepted, this, &IMCall::onCallAccepted);
+    connect(imCall, &IMCall::receiveCallStateAccepted, this, &IMCall::onCallAccepted);
 
-    connect(_jingle, &IMCall::receiveCallStateRejected, this,
+    connect(imCall, &IMCall::receiveCallStateRejected, this,
             [&](IMPeerId friendId, QString callId, bool video) {
                 for (auto handler : callHandlers) {
                     handler->receiveCallStateRejected(friendId, callId, video);
                 }
             });
 
-    connect(_jingle, &IMCall::receiveFriendHangup, this, [&](QString friendId, int state) {
+    connect(imCall, &IMCall::receiveFriendHangup, this, [&](QString friendId, CallState state) {
         for (auto handler : callHandlers) {
-            handler->onHangup(friendId, (CallState)state);
+            handler->onHangup(friendId, state);
         }
     });
 
-    connect(_jingle, &IMCall::receiveFriendHangup, this, [&](QString friendId, int state) {
-        for (auto handler : callHandlers) {
-            handler->onHangup(friendId, (CallState)state);
-        }
-    });
-
-    //  connect(_jingle, &IMCall::receiveFriendVideoFrame,
+    //  connect(imCall, &IMCall::receiveFriendVideoFrame,
     //          this,
     //          [&](const QString &friendId, //
     //              uint16_t w, uint16_t h,  //
@@ -113,7 +235,7 @@ void IMCall::connectJingle(IMJingle* _jingle) {
     //                                         ystride, ustride, vstride);
     //          });
     //
-    //  connect(_jingle, &IMCall::receiveSelfVideoFrame, this,
+    //  connect(imCall, &IMCall::receiveSelfVideoFrame, this,
     //          [&](uint16_t w, uint16_t h, //
     //              const uint8_t *y, const uint8_t *u, const uint8_t *v,
     //              int32_t ystride, int32_t ustride, int32_t vstride) {
@@ -136,7 +258,7 @@ bool IMCall::callToFriend(const QString& friendId, const QString& sId, bool vide
 
     proposeJingleMessage(friendId, sId, video);
 
-    auto resources = im->getOnlineResources(stdstring(friendId));
+    auto resources = _im->getOnlineResources(stdstring(friendId));
     if (resources.empty()) {
         qWarning() << "Can not find online friends" << friendId;
         return false;
@@ -166,7 +288,7 @@ void IMCall::callReject(const IMPeerId& f, const QString& sId) { rejectCall(f, s
 bool IMCall::startCall(const QString& friendId, const QString& sId, bool video) {
     qDebug() << __func__ << "friendId:" << friendId << "video:" << video;
 
-    auto resources = im->getOnlineResources(stdstring(friendId));
+    auto resources = _im->getOnlineResources(stdstring(friendId));
     if (resources.empty()) {
         qWarning() << "目标用户不在线！";
         return false;
@@ -184,7 +306,7 @@ bool IMCall::sendCallToResource(const QString& friendId, const QString& sId, boo
 bool IMCall::createCall(const IMPeerId& to, const QString& sId, bool video) {
     qDebug() << __func__ << "to:" << to.toString() << "sId:" << sId;
 
-    auto ws = createSession(im->getSelfId(), to, sId, lib::ortc::JingleCallType::av);
+    auto ws = createSession(_im->getSelfId(), to, sId, lib::ortc::JingleCallType::av);
 
     auto rtc = lib::ortc::OkRTCManager::getInstance()->getRtc();
     rtc->addRTCHandler(this);
@@ -205,43 +327,36 @@ void IMCall::cancel(const QString& friendId) {
     auto session = m_sessionMap.value(sId);
     if (session) {
         cancelCall(IMContactId{friendId}, qstring(session->getSession()->sid()));
-        clearSessionInfo(session->getSession());
+        clearSessionInfo(sId);
     }
 }
 
 void IMCall::cancelCall(const IMContactId& friendId, const QString& sId) {
     qDebug() << __func__ << friendId.toString() << sId;
 
-    IMJingleSession* s = findSession(sId);
+    IMCallSession* s = findSession(sId);
     if (s) {
         s->doTerminate();
         s->setCallStage(CallStage::StageNone);
-        clearSessionInfo(s->getSession());
+        clearSessionInfo(sId);
     }
     retractJingleMessage(friendId.toString(), sId);
-    //  else {
-    // jingle-message
-    //    if (s->direction() == CallDirection:: CallOut) {
-    //    } else if (s->direction() == CallDirection:: CallIn) {
-    //      rejectJingleMessage(friendId.toString(), sId);
-    //    }
-    //  }
 }
 
 void IMCall::rejectCall(const IMPeerId& peerId, const QString& sId) {
     qDebug() << __func__ << peerId.toString() << sId;
 
-    IMJingleSession* s = findSession(sId);
+    IMCallSession* s = findSession(sId);
     if (s) {
         s->doTerminate();
-        clearSessionInfo(s->getSession());
-    } else {
-        rejectJingleMessage(peerId.toString(), sId);
+        clearSessionInfo(sId);
     }
+    rejectJingleMessage(peerId.toString(), sId);
 }
 
 bool IMCall::answer(const IMPeerId& peerId, const QString& callId, bool video) {
-    qDebug() << __func__ << "peer:" << peerId.toString() << "video:" << video;
+    qDebug() << __func__ << "peer:" << peerId.toString() << "callId:" << callId
+             << "video:" << video;
 
     auto rtc = lib::ortc::OkRTCManager::getInstance()->getRtc();
     rtc->addRTCHandler(this);
@@ -272,7 +387,7 @@ void IMCall::onRTP(const std::string& sid,     //
     auto sId = qstring(sid);
     qDebug() << __func__ << "sId:" << sId << "peerId:" << qstring(peerId);
 
-    PluginList plugins;
+    gloox::Jingle::PluginList plugins;
     toPlugins(oContext, plugins);
 
     auto pSession = findSession(sId);
@@ -292,6 +407,10 @@ void IMCall::onIce(const std::string& sId,     //
                    const std::string& peerId,  //
                    const lib::ortc::OIceUdp& oIceUdp) {
     auto sid = qstring(sId);
+    if (sid.isEmpty()) {
+        qWarning() << "sid is empty.";
+        return;
+    }
 
     qDebug() << __func__ << "sId:" << sid << "peerId:" << qstring(peerId)
              << "mid:" << qstring(oIceUdp.mid) << "mline:" << oIceUdp.mline;
@@ -311,7 +430,7 @@ void IMCall::onIce(const std::string& sId,     //
 
     iceUdp->setDtls(dtls);
 
-    PluginList pluginList;
+    gloox::Jingle::PluginList pluginList;
     pluginList.push_back(iceUdp);
     auto c = new Jingle::Content(oIceUdp.mid, pluginList);
     session->getSession()->transportInfo(c);
@@ -337,23 +456,20 @@ void IMCall::sessionOnAccept(const QString& sId,
                              Jingle::Session* session,
                              const IMPeerId& peerId,
                              const Jingle::Session::Jingle* jingle) {
-    auto sess = m_sessionMap.value(sId);
-    if (sess) {
-        qWarning() << "Call session is existing, the sId is" << sId;
-        return;
-    }
-    // self id
-    auto selfId = im->getSelfId();
+    if (isInvalidSid(sId)) return;
 
-    // 创建session
-    for (auto& file : m_sessionMap) {
-        auto s = new IMJingleSession(sId, session, selfId, peerId, ortc::JingleCallType::av);
-        m_sessionMap.insert(sId, s);
+    auto sess = m_sessionMap.value(sId);
+    if (!sess) {
+        // 创建session
+        // self id
+        auto selfId = _im->getSelfId();
+        sess = new IMCallSession(sId, session, selfId, peerId, ortc::JingleCallType::av);
+        m_sessionMap.insert(sId, sess);
     }
 
     lib::ortc::OJingleContentAv cav;
     cav.sdpType = lib::ortc::JingleSdpType::Answer;
-    parse(jingle->plugins(), cav);
+    parse(jingle, cav);
 
     // RTC 接受会话
     lib::ortc::OkRTCManager::getInstance()
@@ -376,7 +492,7 @@ void IMCall::doJingleMessage(const IMPeerId& peerId, const gloox::Jingle::Jingle
              * 对方拒绝
              */
             //      mPeerRequestMedias.clear();
-            auto ms = jm->medias();
+            const auto& ms = jm->medias();
             emit receiveCallStateRejected(peerId, sId, ms.size() > 1);
             //      emit receiveFriendHangup(friendId, 0);
             break;
@@ -404,13 +520,13 @@ void IMCall::doJingleMessage(const IMPeerId& peerId, const gloox::Jingle::Jingle
             /**
              * 撤回(需要判断是对方还是自己其它终端)
              */
-            emit receiveCallRetract(friendId, 0);
+            emit receiveCallRetract(friendId, CallState::NONE);
             break;
         }
         case Jingle::JingleMessage::accept: {
             // 自己其它终端接受，挂断自己
             if (peerId != _im->getSelfPeerId()) {
-                emit receiveFriendHangup(friendId, 0);
+                emit receiveFriendHangup(friendId, CallState::NONE);
             } else {
                 // 自己终端接受，不处理
                 //            OkRTCManager::getInstance()->getRtc()->CreateAnswer(peerId.toString());
@@ -432,7 +548,8 @@ void IMCall::proposeJingleMessage(const QString& friendId, const QString& callId
     qDebug() << __func__ << "friend:" << friendId << callId;
 
     StanzaExtensionList exts;
-    auto jm = new JingleMessage(JingleMessage::propose, stdstring(callId));
+    auto jm = new gloox::Jingle::JingleMessage(gloox::Jingle::JingleMessage::propose,
+                                               stdstring(callId));
     jm->addMedia(Jingle::Media::audio);
     if (video) {
         jm->addMedia(Jingle::Media::video);
@@ -500,10 +617,10 @@ void IMCall::acceptJingleMessage(const IMPeerId& peerId, const QString& callId, 
     ws->setAccepted(true);
 }
 
-IMJingleSession* IMCall::cacheSessionInfo(const IMContactId& from,
-                                          const IMPeerId& to,
-                                          const QString& sId,
-                                          lib::ortc::JingleCallType callType) {
+IMCallSession* IMCall::cacheSessionInfo(const IMContactId& from,
+                                        const IMPeerId& to,
+                                        const QString& sId,
+                                        lib::ortc::JingleCallType callType) {
     qDebug() << __func__ << "target:" << to.toString();
 
     auto session = _sessionManager  //
@@ -511,28 +628,30 @@ IMJingleSession* IMCall::cacheSessionInfo(const IMContactId& from,
 
     m_friendSessionMap.insert(to, sId);
 
-    auto ws = new IMJingleSession(sId, session, from, to, ortc::JingleCallType::av);
+    auto ws = new IMCallSession(sId, session, from, to, ortc::JingleCallType::av);
     m_sessionMap.insert(sId, ws);
 
     return ws;
 }
 
-void IMCall::clearSessionInfo(Jingle::Session* session) {
-    auto sId = qstring(session->sid());
-
+void IMCall::clearSessionInfo(const QString& sId) {
     qDebug() << __func__ << sId;
+    auto session = m_sessionMap.value(sId);
+    if (!session) {
+        return;
+    }
 
-    auto& responder = session->remote();
+    auto s = session->getSession();
+    auto& responder = s->remote();
     m_friendSessionMap.remove(IMPeerId(responder));
     m_sessionMap.remove(sId);
-
-    _sessionManager->discardSession(session);
+    _sessionManager->discardSession(s);
 }
 
-IMJingleSession* IMCall::createSession(const IMContactId& self,
-                                       const IMPeerId& peer,
-                                       const QString& sId,
-                                       ortc::JingleCallType ct) {
+IMCallSession* IMCall::createSession(const IMContactId& self,
+                                     const IMPeerId& peer,
+                                     const QString& sId,
+                                     ortc::JingleCallType ct) {
     return cacheSessionInfo(self, peer, sId, ct);
 }
 
@@ -540,24 +659,26 @@ void IMCall::handleJingleMessage(const IMPeerId& peerId, const Jingle::JingleMes
     doJingleMessage(peerId, jm);
 }
 
-void IMCall::doSessionInfo(const Session::Jingle* jingle, const IMPeerId& friendId) {
+void IMCall::doSessionInfo(const gloox::Jingle::Session::Jingle* jingle, const IMPeerId& friendId) {
     qDebug() << "jingle:%1 peerId:%2"   //
              << qstring(jingle->sid())  //
              << friendId.toString();
 }
 
-void IMCall::doContentAdd(const Session::Jingle*, const IMPeerId&) {}
+void IMCall::doContentAdd(const gloox::Jingle::Session::Jingle*, const IMPeerId&) {}
 
-void IMCall::doContentRemove(const Session::Jingle*, const IMPeerId&) {}
+void IMCall::doContentRemove(const gloox::Jingle::Session::Jingle*, const IMPeerId&) {}
 
-void IMCall::doContentModify(const Session::Jingle*, const IMPeerId&) {}
+void IMCall::doContentModify(const gloox::Jingle::Session::Jingle*, const IMPeerId&) {}
 
-void IMCall::doContentAccept(const Session::Jingle*, const IMPeerId&) {}
+void IMCall::doContentAccept(const gloox::Jingle::Session::Jingle*, const IMPeerId&) {}
 
-void IMCall::doContentReject(const Session::Jingle*, const IMPeerId&) {}
+void IMCall::doContentReject(const gloox::Jingle::Session::Jingle*, const IMPeerId&) {}
 
-void IMCall::doTransportInfo(const Session::Jingle* jingle, const IMPeerId& peerId) {
+void IMCall::doTransportInfo(const gloox::Jingle::Session::Jingle* jingle, const IMPeerId& peerId) {
     auto sid = qstring(jingle->sid());
+    if (isInvalidSid(sid)) return;
+
     qDebug() << __func__ << "sId:" << sid << "peerId:" << peerId.toString();
 
     auto s = findSession(sid);
@@ -567,7 +688,7 @@ void IMCall::doTransportInfo(const Session::Jingle* jingle, const IMPeerId& peer
     }
 
     ortc::OJingleContentAv content;
-    parse(jingle->plugins(), content);
+    parse(jingle, content);
 
     for (auto& it : content.contents) {
         ortc::OkRTCManager::getInstance()
@@ -576,36 +697,51 @@ void IMCall::doTransportInfo(const Session::Jingle* jingle, const IMPeerId& peer
     }
 }
 
-void IMCall::doTransportAccept(const Session::Jingle*, const IMPeerId&) {}
+void IMCall::doTransportAccept(const gloox::Jingle::Session::Jingle*, const IMPeerId&) {}
 
-void IMCall::doTransportReject(const Session::Jingle*, const IMPeerId&) {}
+void IMCall::doTransportReject(const gloox::Jingle::Session::Jingle*, const IMPeerId&) {}
 
-void IMCall::doTransportReplace(const Session::Jingle*, const IMPeerId&) {}
+void IMCall::doTransportReplace(const gloox::Jingle::Session::Jingle*, const IMPeerId&) {}
 
-void IMCall::doSecurityInfo(const Session::Jingle*, const IMPeerId&) {}
+void IMCall::doSecurityInfo(const gloox::Jingle::Session::Jingle*, const IMPeerId&) {}
 
-void IMCall::doDescriptionInfo(const Session::Jingle*, const IMPeerId&) {}
+void IMCall::doDescriptionInfo(const gloox::Jingle::Session::Jingle*, const IMPeerId&) {}
 
-void IMCall::doInvalidAction(const Session::Jingle*, const IMPeerId&) {}
+void IMCall::doInvalidAction(const gloox::Jingle::Session::Jingle*, const IMPeerId&) {}
 
 void IMCall::sessionOnInitiate(const QString& sId,
                                Jingle::Session* session,
                                const Jingle::Session::Jingle* jingle,
                                const IMPeerId& peerId) {
+    qDebug() << __func__ << "receive session:" << sId;
+
     ortc::OJingleContentAv cav;
-    parse(jingle->plugins(), cav);
+    parse(jingle, cav);
+    if (!cav.isValid()) {
+        addInvalidSid(sId);
+        qDebug() << "Is not av session!";
+        return;
+    }
+
     cav.sdpType = lib::ortc::JingleSdpType::Offer;
     ortc::OkRTCManager::getInstance()->getRtc()->CreateAnswer(stdstring(peerId.toString()), cav);
 }
 
 void IMCall::sessionOnTerminate(const QString& sId, const IMPeerId& peerId) {
     // rtc
-    qDebug() << __func__;
+    qDebug() << __func__ << "sId:" << sId;
+    if (isInvalidSid(sId)) {
+        return;
+    }
+
     auto s = findSession(sId);
     if (s) {
         s->doTerminate();
     }
+    clearSessionInfo(sId);
+    emit receiveFriendHangup(peerId.toFriendId(), CallState::FINISHED);
 }
+
 void IMCall::toPlugins(const ortc::OJingleContentAv& oContext, gloox::Jingle::PluginList& plugins) {
     //<group>
     auto contents = oContext.contents;
@@ -707,20 +843,24 @@ void IMCall::toPlugins(const ortc::OJingleContentAv& oContext, gloox::Jingle::Pl
     plugins.push_back(group);
 }
 
-void IMCall::parse(const PluginList& plugins, ortc::OJingleContentAv& oContextAv) {
-    oContextAv.callType = ortc::JingleCallType::av;
+void IMCall::parse(const gloox::Jingle::Session::Jingle* jingle,
+                   ortc::OJingleContentAv& oContextAv) {
+    oContextAv.sessionId = jingle->sid();
     int mid = 0;
-    for (const auto p : plugins) {
+    for (const auto p : jingle->plugins()) {
         Jingle::JinglePluginType pt = p->pluginType();
         switch (pt) {
-            case JinglePluginType::PluginContent: {
+            case gloox::Jingle::PluginContent: {
                 ortc::OSdp oContent;
 
-                const auto* content = static_cast<const Content*>(p);
+                const auto* content = static_cast<const gloox::Jingle::Content*>(p);
                 oContent.name = content->name();
 
-                const auto* rtp = content->findPlugin<RTP>(PluginRTP);
+                const auto* rtp = content->findPlugin<gloox::Jingle::RTP>(gloox::Jingle::PluginRTP);
                 if (rtp) {
+                    // 存在rtp则设置类型
+                    oContextAv.callType = ortc::JingleCallType::av;
+
                     ortc::SsrcGroup ssrcGroup = {.semantics = rtp->ssrcGroup().semantics,
                                                  .ssrcs = rtp->ssrcGroup().ssrcs};
                     ortc::ORTP description = {
@@ -734,7 +874,8 @@ void IMCall::parse(const PluginList& plugins, ortc::OJingleContentAv& oContextAv
                     oContent.rtp = description;
                 }
 
-                const auto* udp = content->findPlugin<ICEUDP>(PluginICEUDP);
+                const auto* udp =
+                        content->findPlugin<gloox::Jingle::ICEUDP>(gloox::Jingle::PluginICEUDP);
                 if (udp) {
                     ortc::OIceUdp iceUdp = {
                             .mid = std::to_string(mid),         //
@@ -753,23 +894,23 @@ void IMCall::parse(const PluginList& plugins, ortc::OJingleContentAv& oContextAv
                 oContextAv.contents.push_back(oContent);
                 break;
             }
+            case gloox::Jingle::PluginNone:
+                break;
+            case gloox::Jingle::PluginFileTransfer:
+                break;
+            case gloox::Jingle::PluginICEUDP:
+                break;
+            case gloox::Jingle::PluginReason:
+                break;
+            case gloox::Jingle::PluginUser:
+                break;
+            case gloox::Jingle::PluginGroup:
+                break;
+            case gloox::Jingle::PluginRTP:
+                break;
+            case gloox::Jingle::PluginIBB:
+                break;
             default:
-                break;
-            case PluginNone:
-                break;
-            case PluginFileTransfer:
-                break;
-            case PluginICEUDP:
-                break;
-            case PluginReason:
-                break;
-            case PluginUser:
-                break;
-            case PluginGroup:
-                break;
-            case PluginRTP:
-                break;
-            case PluginIBB:
                 break;
         }
         mid++;

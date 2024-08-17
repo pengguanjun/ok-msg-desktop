@@ -13,10 +13,14 @@
 #ifndef PROFILE_H
 #define PROFILE_H
 
-#include "src/core/core.h"
 #include "src/core/toxencrypt.h"
 #include "src/core/toxid.h"
 
+#include "src/core/core.h"
+#include "src/core/coreav.h"
+#include "src/core/corefile.h"
+#include "src/core/icoresettings.h"
+#include "src/friendlist.h"
 #include "src/persistence/history.h"
 
 #include <QByteArray>
@@ -55,7 +59,18 @@ public:
 
     void startCore();
     void stopCore();
+
     Core* getCore();
+
+    CoreAV* getCoreAv() {
+        assert(coreAv.get());
+        return coreAv.get();
+    }
+
+    CoreFile* getCoreFile() {
+        assert(coreFile.get());
+        return coreFile.get();
+    }
 
     bool isEncrypted() const;
     QString setPassword(const QString& newPassword);
@@ -75,7 +90,6 @@ public:
     void saveFriendAlias(const QString& friendPk, const QString& alias);
     QString getFriendAlias(const QString& friendPk);
 
-
     bool isHistoryEnabled();
     History* getHistory();
 
@@ -88,7 +102,6 @@ public:
     static bool exists(QString name);
     static bool isEncrypted(QString name);
     static QString getDbPath(const QString& profileName);
-
 
     uint addContact(const ContactId& cid);
 
@@ -109,13 +122,17 @@ private:
     void initCore(const QByteArray& toxsave, ICoreSettings& s, bool isNewProfile);
 
 private:
-    std::unique_ptr<Core> core = nullptr;
+    std::unique_ptr<Core> core;
+    std::unique_ptr<CoreAV> coreAv;
+    std::unique_ptr<CoreFile> coreFile;
+
     QString host;
     // akka username
     QString name;
     QString password;
     QString nick;
     QByteArray toxsave;
+
     std::unique_ptr<ToxEncrypt> passkey = nullptr;
     std::shared_ptr<RawDatabase> database;
     std::shared_ptr<History> history;
@@ -149,9 +166,9 @@ public slots:
 
     void onSaveToxSave();
 
-//    void onAvatarOfferReceived(const QString& friendId,
-//                               const QString &fileId,
-//                               const QByteArray& avatarHash);
+    //    void onAvatarOfferReceived(const QString& friendId,
+    //                               const QString &fileId,
+    //                               const QByteArray& avatarHash);
 
     void setFriendAvatar(const FriendId& owner, const QByteArray& pic);
 };

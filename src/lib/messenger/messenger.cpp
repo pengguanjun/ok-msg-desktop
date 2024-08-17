@@ -11,6 +11,7 @@
  */
 
 #include "messenger.h"
+#include "IMFile.h"
 
 #include <QThread>
 #include <memory>
@@ -20,7 +21,6 @@
 #include "base/xmls.h"
 
 #include "lib/messenger/IM.h"
-#include "lib/messenger/IMConference.h"
 #include "lib/messenger/IMFile.h"
 #include "lib/messenger/IMCall.h"
 #include "lib/plugin/pluginmanager.h"
@@ -51,20 +51,10 @@ Messenger::Messenger(const QString& host,
 #endif
 
     _im = new ::lib::messenger::IM(host, name, password, features);
+    qDebug() << "Create im =>" << _im;
     connectIM();
 
-    //    connect(_im, &::lib::messenger::IM::connectResult,
-    //            this, &AuthSession::onIMConnectStatus);
-    //    qRegisterMetaType<ok::session::SignInInfo>("ok::session::SignInInfo");
 
-    //    connect(_im, &::lib::messenger::IM::started, this, &AuthSession::onIMStarted);
-
-    //    connect(_im, &IM::connectResult, this, [pm, &_session](lib::messenger::IMConnectStatus
-    //    status) {
-    //      if(status == lib::messenger::IMConnectStatus::CONNECTED){
-    //        pm->startLogin(_session->account());
-    //      }
-    //    });
 }
 
 Messenger::~Messenger() { qDebug() << __func__; }
@@ -462,7 +452,8 @@ void Messenger::onGroupReceived(QString groupId, QString name) {
 
 //Call
 MessengerCall::MessengerCall(Messenger* messenger, QObject* parent) {
-    call = messenger->imCall();
+    call = new ::lib::messenger::IMCall(messenger->im(), this);
+    qDebug() << "Create imCall =>" << call;
 }
 
 void MessengerCall::addCallHandler(CallHandler* h) {
@@ -491,7 +482,6 @@ void MessengerCall::setRemoteMute(bool mute) {
 }
 
 //File
-
 MessengerFile::MessengerFile(Messenger* messenger, QObject* parent) : QObject(parent) {
     fileSender = new IMFile(messenger->im(), this);
 }

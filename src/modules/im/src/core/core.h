@@ -26,6 +26,7 @@
 #include "base/compatiblerecursivemutex.h"
 #include "lib/messenger/messenger.h"
 
+#include "src/friendlist.h"
 #include "src/model/status.h"
 #include "src/util/strongtype.h"
 
@@ -39,8 +40,6 @@
 
 #include <src/model/message.h>
 
-class CoreAV;
-class CoreFile;
 class IAudioControl;
 class ICoreSettings;
 class GroupInvite;
@@ -75,14 +74,15 @@ public:
     static Core* getInstance();
     //  const CoreAV *getAv() const;
     //  CoreAV *getAv();
-    CoreFile* getCoreFile() const;
-    ~Core();
+    //    CoreFile* getCoreFile() const;
+    ~Core() override;
+
     lib::messenger::Messenger* getMessenger() { return tox.get(); }
     static const QString TOX_EXT;
     static QStringList splitMessage(const QString& message);
     QString getPeerName(const FriendId& id) const;
     void loadFriendList(std::list<FriendInfo>&) const;
-
+    FriendList& getFriendList() { return friendList; }
     void loadGroupList() const;
     GroupId getGroupPersistentId(QString groupId) const override;
     uint32_t getGroupNumberPeers(QString groupId) const override;
@@ -326,10 +326,11 @@ private:
     //      }
     //    }
     //  };
+    FriendList friendList;
 
     std::unique_ptr<lib::messenger::Messenger> tox;
-    std::unique_ptr<CoreFile> file;
-    std::unique_ptr<CoreAV> av;
+    //    std::unique_ptr<CoreFile> file;
+    //    std::unique_ptr<CoreAV> av;
 
     MsgId m_receipt;
     QTimer* toxTimer = nullptr;

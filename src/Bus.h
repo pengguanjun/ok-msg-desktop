@@ -19,8 +19,10 @@
 #include <QObject>
 
 class Module;
+class Profile;
 class Core;
 class CoreFile;
+class CoreAV;
 
 namespace ok {
 
@@ -35,7 +37,9 @@ public:
 signals:
     void languageChanged(QString locale);
     void moduleCreated(Module* module);
+    void profileChanged(Profile* profile);
     void coreChanged(Core* core);
+    void coreAvChanged(CoreAV* coreAv);
     void coreFileChanged(CoreFile* coreFile);
 };
 
