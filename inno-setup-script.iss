@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "OkMSG"
-#define MyAppVersion "24.06.21"
+#define MyAppVersion "24.06.22"
 #define MyAppPublisher "OkStar"
 #define MyAppURL "https://github.com/okstar-org/ok-msg-desktop"
 #define MyAppExeName "ok-msg-desktop.exe"
@@ -31,16 +31,16 @@ Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 
-; Ä¬ÈÏÖµyes(¼´ÔÚ[Setup]¶Î²»¼ÓÈëUseSetupLdrÕâ¸ö²ÎÊýÊ±, Inno Setup»áÈÏÎªËüµÄÖµÊÇyes).
-; Ö÷Òª¹¦ÄÜÊÇ¸æËß°²×°±àÒëÆ÷½«Òª´´½¨ºÎÖÖÀàÐÍµÄ°²×°ÎÄ¼þ¡£Èç¹ûÖµÊÇyes, Ôò°²×°±àÒëÆ÷»á½«ËùÓÐµÄsetupÊý¾Ý±àÒëÉú³ÉÒ»¸ö¶ÀÁ¢µÄEXEÎÄ¼þ; Èç¹ûÖµÎªno, Ôò°²×°±àÒëÆ÷½«»á°Ñ°²×°Êý¾ÝÎÄ¼þÖÁÉÙ±àÒëµ½Èý¸öÎÄ¼þÖÐ: setup.exe, setup-0.bin, setup-1.bin¡£
-; ¶øÄãÒªÊ¹ÓÃnoµÄÎ¨Ò»Ô­ÒòÓ¦¸ÃÊÇ³öÓÚµ÷ÊÔµÄÄ¿µÄ¡£
-; ×¢Òâ: µ±Ò»¸ö°²×°ÐèÒª¿ç´ÅÅÌµÄÊ±ºò(DiskSpanning=yes)²»Òª½«¸Ã²ÎÊýµÄÖµÉèÖÃÎªno. µ±Õâ¸öÖµÎªyesµÄÊ±ºò, °²×°³ÌÐò»á±»¿½±´µ½ÓÃ»§ÁÙÊ±Ä¿Â¼²¢ÔÚÕâ¸öÁÙÊ±Ä¿Â¼ÏÂÔËÐÐ, µ«µ±Õâ¸ö²ÎÊýÎªnoÊ±ÕâÐ©²Ù×÷²»»á·¢Éú, Èç¹ûWindowsÊÔÍ¼ÔÚ´ÅÅÌÉÏÕÒµ½setup.exe
-; ÎÄ¼þ¶øÕÒ²»µ½¸ÃÎÄ¼þ, Ôò¿ÉÄÜµ¼ÖÂ´íÎó, ÒòÎªÇý¶¯Æ÷ÖÐ´æÔÚÆäËûµÄ´ÅÅÌ¡£
-; ×¢Òâ: ²»ÒªÊ¹ÓÃUseSetupLdr=no¿ÉÒÔ±ÜÃâ´óÐÍ°²×°³ÌÐòÉÏµÄÊý×ÖÇ©ÃûÑéÖ¤Æô¶¯ÑÓ³Ù, ¶øÓ¦Ê¹ÓÃ´ÅÅÌ¿ç½Ó¡£¿ÉÒÔ²é¿´SignTool»ñÈ¡¸üÏêÏ¸µÄÐÅÏ¢¡£ÁíÍâÒª×¢Òâ¶Ô»ùÓÚUseSetupLdr=noµÄ°²×°³ÌÐò½øÐÐÊý×ÖÇ©Ãû½«µ¼ÖÂÎÞÐ§µÄÊý×ÖÇ©Ãû½øÐÐÐ¶ÔØ¡£
+; Ä¬ï¿½ï¿½Öµyes(ï¿½ï¿½ï¿½ï¿½[Setup]ï¿½Î²ï¿½ï¿½ï¿½ï¿½ï¿½UseSetupLdrï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±, Inno Setupï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½yes).
+; ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½Ç¸ï¿½ï¿½ß°ï¿½×°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÍµÄ°ï¿½×°ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½yes, ï¿½ï¿½×°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½á½«ï¿½ï¿½ï¿½Ðµï¿½setupï¿½ï¿½ï¿½Ý±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½EXEï¿½Ä¼ï¿½; ï¿½ï¿½ï¿½ÖµÎªno, ï¿½ï¿½×°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ°ï¿½×°ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½Ù±ï¿½ï¿½ëµ½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½: setup.exe, setup-0.bin, setup-1.binï¿½ï¿½
+; ï¿½ï¿½ï¿½ï¿½ÒªÊ¹ï¿½ï¿½noï¿½ï¿½Î¨Ò»Ô­ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½Ç³ï¿½ï¿½Úµï¿½ï¿½Ôµï¿½Ä¿ï¿½Ä¡ï¿½
+; ×¢ï¿½ï¿½: ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½×°ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ìµï¿½Ê±ï¿½ï¿½(DiskSpanning=yes)ï¿½ï¿½Òªï¿½ï¿½ï¿½Ã²ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½Îªno. ï¿½ï¿½ï¿½ï¿½ï¿½ÖµÎªyesï¿½ï¿½Ê±ï¿½ï¿½, ï¿½ï¿½×°ï¿½ï¿½ï¿½ï¿½á±»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½Ê±Ä¿Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±Ä¿Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½, ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÎªnoÊ±ï¿½ï¿½Ð©ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½á·¢ï¿½ï¿½, ï¿½ï¿½ï¿½Windowsï¿½ï¿½Í¼ï¿½Ú´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òµï¿½setup.exe
+; ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½Ò²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½, ï¿½ï¿½ï¿½ï¿½Üµï¿½ï¿½Â´ï¿½ï¿½ï¿½, ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä´ï¿½ï¿½Ì¡ï¿½
+; ×¢ï¿½ï¿½: ï¿½ï¿½ÒªÊ¹ï¿½ï¿½UseSetupLdr=noï¿½ï¿½ï¿½Ô±ï¿½ï¿½ï¿½ï¿½ï¿½Í°ï¿½×°ï¿½ï¿½ï¿½ï¿½ï¿½Ïµï¿½ï¿½ï¿½ï¿½ï¿½Ç©ï¿½ï¿½ï¿½ï¿½Ö¤ï¿½ï¿½ï¿½ï¿½ï¿½Ó³ï¿½, ï¿½ï¿½Ó¦Ê¹ï¿½Ã´ï¿½ï¿½Ì¿ï¿½Ó¡ï¿½ï¿½ï¿½ï¿½Ô²é¿´SignToolï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òª×¢ï¿½ï¿½Ô»ï¿½ï¿½ï¿½UseSetupLdr=noï¿½Ä°ï¿½×°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç©ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç©ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¶ï¿½Ø¡ï¿½
 UseSetupLdr=yes
-; VersionInfoVesionÊÇÔÚ[Setup]¶ÎÀïÃæÓÃÀ´Ö¸Ê¾¶þ½øÖÆÎÄ¼þµÄ°æ±¾µÄ, ËüÊÇÓÉ'.'(µãºÅ)¼°'.'(µãºÅ)·Ö¿ªµÄ4¸öÕûÐÍÊýÖµ×é³ÉµÄ,Èç¹û²»Ð´Õâ¸ö×Ö¶ÎµÄ»°, Ä¬ÈÏÊÇ: 0.0.0.0
-; Èç¹ûÖ»Ð´²¿·ÝµÄ°æ±¾ºÅÊýÖµÒ²ÊÇ¿ÉÒÔµÄ, È±Ê§µÄÊýÖµ²¿·Ý»á×Ô¶¯×·¼Ó0, ±ÈÈçÊäÈëµÄÈç¹ûÊÇ1.2Ôò»á×Ô¶¯±»²¹³äÎª1.2.0.0
-; µ±UseSetupLdrµÄÖµÎªnoÊ±, Õâ¸ö²ÎÊý¾Í²»»á¶ÔÉú³ÉµÄ¶þ½øÖÆÎÄ¼þÓÐÈÎºÎµÄÓ°ÏìÁË
+; VersionInfoVesionï¿½ï¿½ï¿½ï¿½[Setup]ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¸Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½Ä°æ±¾ï¿½ï¿½, ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½'.'(ï¿½ï¿½ï¿½)ï¿½ï¿½'.'(ï¿½ï¿½ï¿½)ï¿½Ö¿ï¿½ï¿½ï¿½4ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½Éµï¿½,ï¿½ï¿½ï¿½ï¿½ï¿½Ð´ï¿½ï¿½ï¿½ï¿½Ö¶ÎµÄ»ï¿½, Ä¬ï¿½ï¿½ï¿½ï¿½: 0.0.0.0
+; ï¿½ï¿½ï¿½Ö»Ð´ï¿½ï¿½ï¿½ÝµÄ°æ±¾ï¿½ï¿½ï¿½ï¿½ÖµÒ²ï¿½Ç¿ï¿½ï¿½Ôµï¿½, È±Ê§ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½Ý»ï¿½ï¿½Ô¶ï¿½×·ï¿½ï¿½0, ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½1.2ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îª1.2.0.0
+; ï¿½ï¿½UseSetupLdrï¿½ï¿½ÖµÎªnoÊ±, ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÉµÄ¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ÎºÎµï¿½Ó°ï¿½ï¿½ï¿½ï¿½
 VersionInfoVersion={#MyAppVersion}
 
 [Languages]
